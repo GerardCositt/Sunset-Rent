@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Anexo 1 · Mapa mental interactivo · Proceso de alquiler (Odoo v18)</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root{
+      --cositt:#C52439; /* Pantone 186C */
+      --bg:#0b1020;--panel:#0e162b;--ink:#0f172a;
+      --branch:#e0f2fe;--leaf:#d1fae5;--stroke:#7dd3fc;--stroke2:#34d399;
+    }
+    html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 20% -10%, #111827, #0b1020 60%, #0a0a0a);font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;color:#e5e7eb}
+    .app{display:grid;grid-template-columns:320px 1fr;height:100%}
+    .sidebar{padding:18px;border-right:1px solid #1f2937;background:linear-gradient(180deg, rgba(197,36,57,.08), transparent 35%), rgba(17,24,39,.6);backdrop-filter:blur(4px)}
+    h1{font-size:18px;margin:0 0 8px;font-weight:700}
+    .tag{display:inline-block;background:var(--cositt);color:#fff;font-size:12px;padding:3px 10px;border-radius:999px;margin-bottom:10px}
+    .hint{font-size:12px;color:#cbd5e1}
+    .controls{margin-top:14px;display:grid;gap:10px}
+    .field{display:flex;gap:8px}
+    input[type="search"]{flex:1;background:#0b1220;color:#e5e7eb;border:1px solid #334155;border-radius:10px;padding:10px 12px;outline:none}
+    .btn{background:#101827;color:#e5e7eb;border:1px solid #334155;border-radius:10px;padding:10px 12px;cursor:pointer}
+    .btn:hover{border-color:#64748b}
+    .legend{margin-top:8px;font-size:12px;color:#cbd5e1}
+    .legend .dot{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:8px}
+    .rootc{background:var(--cositt)}.branchc{background:var(--branch)}.leafc{background:var(--leaf)}
+
+    .stage{position:relative}
+    svg{width:100%;height:100%;display:block}
+    .link{fill:none;stroke:var(--stroke);stroke-opacity:.5;stroke-width:2px;pointer-events:none}
+    .link.leaf{stroke:var(--stroke2);stroke-opacity:.55}
+    .node rect{rx:14;ry:14}
+    .node.root rect{fill:var(--cositt);stroke:#fecaca;stroke-width:1.2}
+    .node.branch rect{fill:var(--branch);stroke:#bae6fd}
+    .node.leaf rect{fill:var(--leaf);stroke:#86efac}
+    .node text{fill:#0b1220;font-size:16px;line-height:1.25}
+    .node.root text{fill:white;font-weight:800;font-size:18px}
+    .node.branch text{font-weight:700}
+    .node.leaf text{font-weight:600}
+    .node:hover rect{stroke:#f59e0b;stroke-width:2}
+    .hit rect{outline:2px solid #f59e0b;outline-offset:2px}
+    .toolbar{position:absolute;top:12px;right:12px;display:flex;gap:8px}
+    .tbtn{background:#0b1220;color:#e5e7eb;border:1px solid #334155;border-radius:10px;padding:8px 10px;cursor:pointer}
+    .tbtn:hover{border-color:#64748b}
+    .watermark{position:absolute;inset:auto 12px 10px auto;color:#94a3b8;font-size:11px;opacity:.75}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <span class="tag">COSITT · Anexo 1</span>
+      <h1>Mapa mental interactivo</h1>
+      <div class="hint">Proceso integral de alquiler de furgonetas en Odoo v18. Arrastra para mover, rueda para hacer zoom, clic para expandir/contraer.</div>
+      <div class="controls">
+        <div class="field">
+          <input id="q" type="search" placeholder="Buscar (p. ej. depósito, devolución, mantenimiento)…" />
+          <button class="btn" id="clear">Limpiar</button>
+        </div>
+        <div class="field">
+          <button class="btn" id="expandAll">Expandir todo</button>
+          <button class="btn" id="collapseAll">Contraer</button>
+        </div>
+        <div class="legend">
+          <div><span class="dot rootc"></span>Raíz</div>
+          <div><span class="dot branchc"></span>Etapas</div>
+          <div><span class="dot leafc"></span>Acciones/elementos</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div class="toolbar">
+        <button class="tbtn" id="fit">Ajustar</button>
+        <button class="tbtn" id="exportPNG">PNG</button>
+      </div>
+      <svg id="svg"></svg>
+      <div class="watermark">COSITT technology · #C52439</div>
+    </main>
+  </div>
+
+<script>
+// ===== Datos =====
+const data = {
+  name: "Proceso integral de alquiler · Odoo v18",
+  children: [
+    { name: "1. Solicitud del cliente", children:[
+      {name:"Datos: tipo, fechas, lugares, DNI/licencia, pago"},
+      {name:"Canales: Website, CRM, manual"},
+      {name:"Validaciones: licencia vigente, obligatorios"},
+      {name:"Términos: edad mínima, seguro, combustible"},
+      {name:"Disponibilidad preliminar (calendario)"}
+    ]},
+    { name: "2. Verificación de disponibilidad", children:[
+      {name:"Inventario por fechas y categoría / unidad"},
+      {name:"Bloqueos: mantenimiento, reparación, limpieza"},
+      {name:"Tiempo de seguridad entre reservas"},
+      {name:"Alternativas: fechas, modelos, sucursales"},
+      {name:"Lista de espera (opcional)"},
+      {name:"Plan de revisiones (Flota)"}
+    ]},
+    { name:"3. Confirmación de la reserva", children:[
+      {name:"Contrato con firma digital"},
+      {name:"Depósito/fianza (producto servicio)"},
+      {name:"Pago online y portal cliente"},
+      {name:"Recordatorios y cancelación automática"},
+      {name:"Modificaciones antes de entrega"}
+    ]},
+    { name:"4. Entrega del vehículo", children:[
+      {name:"Inspección con fotos y checklist"},
+      {name:"Firma hoja de revisión"},
+      {name:"Llaves + documentación"},
+      {name:"Marcar ‘Recogido’ / transferencia stock"},
+      {name:"Normas de uso y asistencia"},
+      {name:"Reemplazo por incidencia última hora"}
+    ]},
+    { name:"5. Uso durante el alquiler", children:[
+      {name:"Asistencia 24/7 y sustitución"},
+      {name:"Incidentes/accidentes · Flota"},
+      {name:"Extensiones y recálculo"},
+      {name:"Seguimiento (tareas CRM)"}
+    ]},
+    { name:"6. Devolución del vehículo", children:[
+      {name:"Inspección: daños, limpieza, km, combustible, accesorios"},
+      {name:"Ajustes: combustible, km extra, daños, limpieza, retrasos"},
+      {name:"Registro de daños y comunicación"},
+      {name:"No-show / devolución fuera de horario"}
+    ]},
+    { name:"7. Post-devolución · Mantenimiento/Limpieza", children:[
+      {name:"Limpieza completa y preparación"},
+      {name:"Órdenes de servicio (mecánica, chapa/pintura)"},
+      {name:"Estado ‘no disponible’ hasta cierre"},
+      {name:"Cierre, costes y retorno a disponibilidad"}
+    ]},
+    { name:"8. Cierre y seguimiento", children:[
+      {name:"Factura final + compensación del depósito"},
+      {name:"Reembolso fianza"},
+      {name:"Encuesta de satisfacción (Encuestas)"},
+      {name:"KPIs: utilización, ingresos, costes"}
+    ]}
+  ]
+};
+
+// ===== D3 (Left-to-Right) con anclaje exacto a bordes =====
+const svg = d3.select('#svg');
+const g = svg.append('g');
+const linkG = g.append('g');
+const nodeG = g.append('g');
+
+const zoom = d3.zoom().scaleExtent([0.4, 2.5]).on('zoom', (e)=> g.attr('transform', e.transform));
+svg.call(zoom);
+
+const root = d3.hierarchy(data);
+root.x0 = 0; root.y0 = 0;
+root.children.forEach(collapse);
+
+const tree = d3.tree().nodeSize([64, 240]).separation((a,b)=> (a.parent===b.parent?1.2:1.6));
+
+// medir texto y crear cajas con padding; multi-línea
+const ctx = document.createElement('canvas').getContext('2d');
+function computeBox(d){
+  const isRoot = d.depth===0;
+  const isBranch = d.children || d._children;
+  const font = isRoot ? '800 18px Inter' : (isBranch ? '700 16px Inter' : '600 16px Inter');
+  ctx.font = font;
+  const maxWidth = isRoot? 520 : (d.depth===1? 460 : 380); // más ancho para ramas
+  const words = String(d.data.name).split(' ');
+  const lines = []; let line = '';
+  for(const w of words){
+    const test = line ? (line + ' ' + w) : w;
+    if(ctx.measureText(test).width > maxWidth){
+      if(line) lines.push(line); line = w;
+    } else { line = test; }
+  }
+  if(line) lines.push(line);
+  const paddingX = isRoot? 22:16, paddingY = isRoot? 16:12;
+  const textH = lines.length * (isRoot? 24:22);
+  const h = textH + paddingY*2; const w = maxWidth + paddingX*2;
+  d._lines = lines; d.box = {w, h, paddingX, paddingY, font, lh:(isRoot?24:22)};
+}
+
+function collapse(d){ if(d.children){ d._children = d.children; d._children.forEach(collapse); d.children=null; } }
+function expandAll(d){ if(d._children){ d.children=d._children; d._children=null; } if(d.children) d.children.forEach(expandAll); }
+
+function linkPath(s, t){
+  // desde borde derecho del padre hasta borde izquierdo del hijo
+  const x1 = s.y + s.box.w;   // derecha del padre
+  const y1 = s.x;             // centro vertical del padre
+  const x2 = t.y;             // izquierda del hijo
+  const y2 = t.x;             // centro vertical del hijo
+  const mx = (x1 + x2) / 2;   // punto medio para curva suave
+  return `M ${x1},${y1} C ${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+}
+
+let id = 0;
+function update(source){
+  // 1) calcular cajas primero
+  root.each(computeBox);
+
+  // 2) layout solo para Y (vertical) con d3, y ajustar X (horizontal) de forma acumulativa por ancho de caja
+  tree(root); // esto asigna d.x (vertical). Usaremos nuestro cálculo manual para d.y
+  root.each(d=>{
+    if(!d.parent){ d.y = 0; return; }
+    d.y = d.parent.y + d.parent.box.w + 160; // gap fijo + ancho del padre
+  });
+
+  // LINKS
+  const links = root.links();
+  const link = linkG.selectAll('path.link').data(links, d=> d.target._lid || (d.target._lid = ++id));
+  link.enter().append('path').attr('class', d=> 'link ' + (d.target.children||d.target._children? '' : 'leaf'))
+    .attr('d', _=> linkPath(source, source))
+    .transition().duration(350).attr('d', d=> linkPath(d.source, d.target));
+  link.transition().duration(350).attr('d', d=> linkPath(d.source, d.target));
+  link.exit().transition().duration(250).attr('d', _=> linkPath(source, source)).remove();
+
+  // NODES
+  const nodes = root.descendants();
+  const node = nodeG.selectAll('g.node').data(nodes, d=> d._nid || (d._nid = ++id));
+  const enter = node.enter().append('g')
+    .attr('class', d=> 'node ' + (d.depth===0? 'root' : (d.children||d._children? 'branch' : 'leaf')))
+    .attr('transform', `translate(${source.y},${source.x})`)
+    .on('click', (e,d)=>{ if(d.children){ d._children=d.children; d.children=null; } else if(d._children){ d.children=d._children; d._children=null; } update(d); });
+
+  enter.append('rect')
+    .attr('x', 0)
+    .attr('y', d=> -d.box.h/2)
+    .attr('width', d=> d.box.w)
+    .attr('height', d=> d.box.h);
+
+  // Texto multi-línea
+  enter.each(function(d){
+    const g = d3.select(this);
+    const tx = d.box.paddingX; let ty = -d.box.h/2 + d.box.paddingY + d.box.lh/2;
+    d._lines.forEach(line=>{ g.append('text').attr('x', tx).attr('y', ty).style('font', d.box.font).text(line); ty += d.box.lh; });
+  });
+
+  const merged = enter.merge(node);
+  merged.transition().duration(350).attr('transform', d=> `translate(${d.y},${d.x})`);
+
+  node.exit().transition().duration(250).attr('transform', `translate(${source.y},${source.x})`).remove();
+
+  fitIfFirstRun();
+}
+
+let firstFit=true; function fitIfFirstRun(){ if(firstFit){ firstFit=false; fit(); } }
+
+function fit(){
+  const svgEl = svg.node(); const bbox = g.node().getBBox();
+  const margin = 30; const w = svgEl.clientWidth, h = svgEl.clientHeight;
+  const scale = Math.min((w - margin)/bbox.width, (h - margin)/bbox.height);
+  const tx = (w - scale*bbox.width)/2 - bbox.x*scale;
+  const ty = (h - scale*bbox.height)/2 - bbox.y*scale;
+  svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(tx,ty).scale(scale));
+}
+
+update(root);
+
+// ===== Controles =====
+const q = document.getElementById('q');
+const clearBtn = document.getElementById('clear');
+const expandBtn = document.getElementById('expandAll');
+const collapseBtn = document.getElementById('collapseAll');
+const fitBtn = document.getElementById('fit');
+const exportBtn = document.getElementById('exportPNG');
+
+q.addEventListener('input', ()=> search(q.value));
+clearBtn.addEventListener('click', ()=>{ q.value=''; search(''); });
+expandBtn.addEventListener('click', ()=>{ expandAll(root); update(root); fit(); });
+collapseBtn.addEventListener('click', ()=>{ root.children.forEach(collapse); update(root); fit(); });
+fitBtn.addEventListener('click', fit);
+exportBtn.addEventListener('click', downloadPNG);
+
+function search(term){
+  term = term.trim().toLowerCase();
+  nodeG.selectAll('.node').classed('hit', false);
+  if(!term) return;
+  nodeG.selectAll('.node').each(function(d){
+    if(d.data.name.toLowerCase().includes(term)){
+      d3.select(this).classed('hit', true);
+      let a=d.parent; while(a){ if(a._children){ a.children=a._children; a._children=null; } a=a.parent; }
+    }
+  });
+  update(root);
+}
+
+// Exportar PNG
+function downloadPNG(){
+  const serializer = new XMLSerializer();
+  const svgNode = document.querySelector('#svg');
+  const clone = svgNode.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  const svgStr = serializer.serializeToString(clone);
+  const img = new Image();
+  const svgBlob = new Blob([svgStr], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(svgBlob);
+  img.onload = function(){
+    const canvas = document.createElement('canvas');
+    canvas.width = svgNode.clientWidth * 2; canvas.height = svgNode.clientHeight * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0b1020'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Mapa-mental-Odoo-v18.png'; a.click(); });
+  };
+  img.src = url;
+}
+
+window.addEventListener('resize', ()=> fit());
+</script>
+</body>
+</html>
